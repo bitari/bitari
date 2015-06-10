@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>GetFeatureInfo Popup</title>
+    <script src="../lib/OpenLayers.js"></script>
+    <link rel="stylesheet" href="../theme/default/style.css" type="text/css">
+    <link rel="stylesheet" href="style.css" type="text/css">
+    <script>
+	function load() {
+ //variables
+	var geographic = new OpenLayers.Projection("EPSG:4326");
+    var mercator = new OpenLayers.Projection("EPSG:900913");
+	
+	
+	//map container
+	map = new OpenLayers.Map("map",
+		{projection: mercator,
+		displayProjection: geographic},
+		{controls: []}
+		);
+	
+	//basemap
+	var osm = new OpenLayers.Layer.OSM();
+    map.addLayers([osm]);
+	
+	//map.addControl(new OpenLayers.Control.PanZoomBar());   //diaktifkan lagi kalau sudah waktunya
+	map.addControl(new OpenLayers.Control.MousePosition());
+	
+	//wms
+	jalanwms = new OpenLayers.Layer.WMS("jaringanJalan84",
+				"http://localhost:8080/geoserver/qgis/wms",	//change here
+				{
+					LAYERS: 'qgis:ugm',			//and here
+					STYLES: 'ugm',
+					projection: geographic,
+					transparent:true,
+					tiled: true
+				});
+	
+	map.addLayer(jalanwms);
+	
+	var jalan = new OpenLayers.Layer.Vector("Jalan", {
+                strategies:[
+        new OpenLayers.Strategy.BBOX(),
+        new OpenLayers.Strategy.Save()],
+                protocol: new OpenLayers.Protocol.WFS({
+                    version: "1.0.0",
+                    url: "http://localhost:8080/geoserver/qgis/wfs",
+                    featureType: "Jalan"
+                })
+            });
+					
+            map.addLayer(jalan);
+			
+    // On the fly reprojection
+    var bounds = new OpenLayers.Bounds(
+                    110.2145252700034, -7.9550128489747423,
+                    110.91875368039334, 7.0197563099999978
+                );
+    map.zoomToExtent(bounds.transform(geographic, mercator));
+	
+	var koordinat = new OpenLayers.Control.MousePosition();
+	map.addControl(koordinat);
+
+
+	//--------Featureinfo
+	
+	info = new OpenLayers.Control.WMSGetFeatureInfo({
+            url: 'http://localhost:8080/geoserver/qgis/wms', 
+            title: 'Identify features by clicking',
+            queryVisible: true,
+            eventListeners: {
+                getfeatureinfo: function(event) {
+                    map.addPopup(new OpenLayers.Popup.FramedCloud(
+                        "chicken", 
+                        map.getLonLatFromPixel(event.xy),
+                        null,
+                        event.text,
+                        null,
+                        true
+                    ));
+                }
+            }
+        });
+        map.addControl(info);
+        info.activate();
+			
+            map.addControl(new OpenLayers.Control.MousePosition());
+			
+}
+
+  </script>
+  </head>
+  <body onload="load()">
+      <h1 id="title">Feature Info in Popup</h1>
+
+      <div id="tags">
+        WMS, GetFeatureInfo, popup
+      </div>
+
+      <p id="shortdesc">
+        Demonstrates the WMSGetFeatureInfo control for fetching information
+        about a position from WMS (via GetFeatureInfo request).  Results
+        are displayed in a popup.
+      </p>
+
+      <div id="map" class="smallmap"></div>
+
+    <div id="docs"></div>
+  </body>
+</html>
